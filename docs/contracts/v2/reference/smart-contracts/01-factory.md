@@ -30,6 +30,10 @@ Emitted each time a pair is created via [createPair](#createpair).
 
 ## getPair
 
+
+<BonadocsWidget />
+
+
 ```solidity
 function getPair(address tokenA, address tokenB) external view returns (address pair);
 ```
