@@ -1,7 +1,7 @@
 import './style.css'
 
 import React from 'react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export interface BonadocsWidgetProps {
   collectionCid: string
@@ -13,6 +13,12 @@ export interface BonadocsWidgetParamProps {
   name: string
   type: string
 }
+
+let injectedProvider = false
+
+
+
+const isMetaMask = injectedProvider ? window.ethereum.isMetaMask : false
 
 export default function BonadocsWidget(props: BonadocsWidgetProps) {
   const [open, isOpen] = useState<boolean>(true)
@@ -44,8 +50,8 @@ export default function BonadocsWidget(props: BonadocsWidgetProps) {
       type: 'number',
     },
     {
-      name: 'Gas fee',
-      type: 'number',
+      name: 'Gas price',
+      type: 'gwei',
     },
     {
       name: 'Value',
@@ -57,6 +63,19 @@ export default function BonadocsWidget(props: BonadocsWidgetProps) {
     },
   ]
   const widgetName = 'getPair'
+
+  useEffect(() => {
+    const getProvider = async () => {
+      //const provider = await isMetaMask({ silent: true })
+      if (typeof window.ethereum !== 'undefined') {
+        injectedProvider = true
+      }
+      console.log('WALLET EXISTENCE', injectedProvider)
+      // setHasProvider(Boolean(provider)) // transform provider to true or false
+    }
+
+    getProvider()
+  }, [])
 
   return (
     <>
@@ -75,7 +94,7 @@ export default function BonadocsWidget(props: BonadocsWidgetProps) {
           <div className="bonadocs__widget__header__button" onClick={() => isOpen(!open)}>
             Try it out
             <img
-              className="bonadocs__widget__header__button__img"
+              className={`bonadocs__widget__header__button__img ${open && 'transition'}`}
               src="https://res.cloudinary.com/dfkuxnesz/image/upload/v1700039314/chevron_v1lajx.svg"
             />
           </div>
@@ -181,14 +200,18 @@ export default function BonadocsWidget(props: BonadocsWidgetProps) {
                 <span>Not connected</span>
               </div>
               {!result ? (
-                <button
-                  onClick={() => setResult(true)}
-                  id="ctn__button"
-                  className="bonadocs__widget__params__button"
-                  type="button"
-                >
-                  Connect Wallet
-                </button>
+                <>
+                  {true && (
+                    <button
+                      onClick={() => setResult(true)}
+                      id="ctn__button"
+                      className="bonadocs__widget__params__button"
+                      type="button"
+                    >
+                      Connect Wallet
+                    </button>
+                  )}
+                </>
               ) : (
                 <button
                   onClick={() => setResult(false)}
@@ -296,4 +319,28 @@ export default function BonadocsWidget(props: BonadocsWidgetProps) {
       </div>
     </>
   )
+}
+
+async function loadWidgetConfiguration() {
+  return {
+    functions: [
+      {
+        chainCode: 'evm:1',
+        address: '0x37823478348734784378349834',
+        func: {
+          constant: true,
+          inputs: [
+            { internalType: 'address', name: '', type: 'address' },
+            { internalType: 'address', name: '', type: 'address' },
+          ],
+          name: 'getPair',
+          outputs: [{ internalType: 'address', name: '', type: 'address' }],
+          payable: false,
+          stateMutability: 'view',
+          type: 'function',
+        },
+      },
+    ],
+    collectionURI: 'uniswap-v2.bonadocs.eth',
+  }
 }
