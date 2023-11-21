@@ -1,27 +1,25 @@
 import './style.css'
 
-import React from 'react'
-import { useState, useEffect } from 'react'
+import { BrowserProvider, Signer } from 'ethers'
+import React, { useEffect, useState } from 'react'
+
+import { loadWidgetExecutor, WidgetExecutor } from './lib'
 
 export interface BonadocsWidgetProps {
-  collectionCid: string
-  signature: string
-  fallbackDocText: string
+  widgetConfigUri: string
+  fallbackDocTextMd?: string
 }
 
+// Remove this and use FragmentDisplayDataEntry instead
 export interface BonadocsWidgetParamProps {
   name: string
   type: string
 }
 
-let injectedProvider = false
-
-
-
-const isMetaMask = injectedProvider ? window.ethereum.isMetaMask : false
-
 export default function BonadocsWidget(props: BonadocsWidgetProps) {
   const [open, isOpen] = useState<boolean>(true)
+  const [signer, setSigner] = useState<Signer | null>(null)
+  const [widgetExecutor, setWidgetExecutor] = useState<WidgetExecutor | null>(null)
   const [methodParam, setMethodParam] = useState<boolean>(true)
   const [result, setResult] = useState<boolean>(false)
   const params: BonadocsWidgetParamProps[] = [
@@ -64,18 +62,43 @@ export default function BonadocsWidget(props: BonadocsWidgetProps) {
   ]
   const widgetName = 'getPair'
 
-  useEffect(() => {
-    const getProvider = async () => {
-      //const provider = await isMetaMask({ silent: true })
-      if (typeof window.ethereum !== 'undefined') {
-        injectedProvider = true
-      }
-      console.log('WALLET EXISTENCE', injectedProvider)
-      // setHasProvider(Boolean(provider)) // transform provider to true or false
+  /**
+   * Connects the users wallet to the documentation site so that they can
+   * execute functions on the widget. This is not required for the widget
+   * to work, but it is required for the user to be able to execute functions
+   * on the blockchain. Simulations and read-only functions should work
+   * without connecting a wallet.
+   */
+  function connectWallet() {
+    if (!window.ethereum) {
+      return
     }
 
-    getProvider()
+    const provider = new BrowserProvider(window.ethereum)
+    provider.getSigner().then(setSigner)
+  }
+
+  useEffect(() => {
+    loadWidgetExecutor(props.widgetConfigUri).then(setWidgetExecutor)
   }, [])
+
+  useEffect(() => {
+    if (!signer || !widgetExecutor) {
+      return
+    }
+
+    widgetExecutor.setSigner(signer)
+  }, [signer, widgetExecutor])
+
+  // you can get the function views from the widgetExecutor by using widgetExecutor.functionViews
+  // const functionViews = widgetExecutor?.functionViews
+
+  // Each function view holds the data you need to render the function on widget
+  // You can get the display data by using functionView.displayData
+  // functionView.setValue(path, value) to set the value of an input field
+  // Look at the FunctionFragmentView class for more info
+  // The widget executor also holds the functions to simulate and execute the functions
+  // on the widget
 
   return (
     <>
@@ -232,10 +255,10 @@ export default function BonadocsWidget(props: BonadocsWidgetProps) {
         <div className="bonadocs__widget__codeblock">
           <pre>
             <code>
-              {/* 
+              {/*
                   <!-- Method Without Param -->
                   <!-- <span className="bonadocs__widget__codeblock__inner">
-                    <span className="bonadocs__widget__codeblock__inner__function">function</span> <span className="bonadocs__widget__codeblock__inner__name">accountingOracle </span> <span className="bonadocs__widget__codeblock__inner__parenthesis">()</span> <span className="bonadocs__widget__codeblock__inner__view">view returns</span> <span className="bonadocs__widget__codeblock__inner__parenthesis">(</span> <span className="bonadocs__widget__codeblock__inner__param">address</span> <span className="bonadocs__widget__codeblock__inner__parenthesis">)</span>  
+                    <span className="bonadocs__widget__codeblock__inner__function">function</span> <span className="bonadocs__widget__codeblock__inner__name">accountingOracle </span> <span className="bonadocs__widget__codeblock__inner__parenthesis">()</span> <span className="bonadocs__widget__codeblock__inner__view">view returns</span> <span className="bonadocs__widget__codeblock__inner__parenthesis">(</span> <span className="bonadocs__widget__codeblock__inner__param">address</span> <span className="bonadocs__widget__codeblock__inner__parenthesis">)</span>
                   </span> -->
                   <!-- Method With Param(s) -->
                   */}
@@ -319,28 +342,4 @@ export default function BonadocsWidget(props: BonadocsWidgetProps) {
       </div>
     </>
   )
-}
-
-async function loadWidgetConfiguration() {
-  return {
-    functions: [
-      {
-        chainCode: 'evm:1',
-        address: '0x37823478348734784378349834',
-        func: {
-          constant: true,
-          inputs: [
-            { internalType: 'address', name: '', type: 'address' },
-            { internalType: 'address', name: '', type: 'address' },
-          ],
-          name: 'getPair',
-          outputs: [{ internalType: 'address', name: '', type: 'address' }],
-          payable: false,
-          stateMutability: 'view',
-          type: 'function',
-        },
-      },
-    ],
-    collectionURI: 'uniswap-v2.bonadocs.eth',
-  }
 }
