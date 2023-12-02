@@ -18,6 +18,9 @@ interface FragmentDisplayDataEntry {
   name: string
   path: string
   length?: number
+  arrayPath?: string
+  arrayIndex?: number
+  indexInArray?: number
 }
 
 export type FragmentDisplayData = FragmentDisplayDataEntry[]
